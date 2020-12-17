@@ -1,0 +1,73 @@
+---
+title: "Part5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 5. A tutorial for my_rf_cv
+
+```{r}
+# load my_rf_cv method
+source("../../stat302proj2/R/my_rf_cv.R")
+# load my_penguins dataset
+load("../Data/my_penguins.rda")
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(randomForest)
+library(stats)
+library(class)
+library(magrittr)
+# create a data frame to store CV estimated MSE for each k
+df_cv_MSE <- data.frame(integer(), double())
+for (i in 1:30) {
+  df_cv_MSE <- rbind(df_cv_MSE, c(2, my_rf_cv(2))) 
+  df_cv_MSE <- rbind(df_cv_MSE, c(5, my_rf_cv(5)))
+  df_cv_MSE <- rbind(df_cv_MSE, c(10, my_rf_cv(10)))
+}
+# assign column names to the data frame
+colnames(df_cv_MSE) <- c("k", "CV_estimated_MSE")
+# factorize k
+df_cv_MSE$k <- as.factor(df_cv_MSE$k)
+# make a boxplot to show the distribution of CV estimated MSE for each k
+ggplot(df_cv_MSE, aes(x = k, y = CV_estimated_MSE, color = k)) +
+  geom_boxplot(fill='#A4A4A4')+
+  labs(title="Plot of CV estimated MSE by k",x="k(number of folds)", y = "CV estimated MSE") +
+  theme_bw()
+# save the visualization to Figures folder
+ggsave("boxplot.png", path = "../Output/Figures", height=9,width=12,dpi=72)
+```
+
+
+```{r}
+library(tibble)
+library(dplyr)
+library(readr)
+# extract CV estimated MSE with k = 2
+k_2 <- filter(df_cv_MSE, k==2)[["CV_estimated_MSE"]]
+# extract CV estimated MSE with k = 5
+k_5 <- filter(df_cv_MSE, k==5)[["CV_estimated_MSE"]]
+# extract CV estimated MSE with k = 10
+k_10 <- filter(df_cv_MSE,k==10)[["CV_estimated_MSE"]]
+# create a summary table for average CV estimates and the standard deviation of CV estimates 
+sum_table <- rbind(c(mean(k_2), sd(k_2)),
+                   c(mean(k_5), sd(k_5)),
+                   c(mean(k_10), sd(k_10)))
+# assign row names to the table
+sum_table <- cbind(paste0("k = ", c(2, 5, 10)), sum_table)
+# assign column names to the table
+colnames(sum_table) <- c("k", "average CV estimate", "sd of the CV estimates")
+sum_table <- as_tibble(sum_table)
+sum_table
+# save the table of summary statistics to Results folder
+saveRDS(sum_table, file = "../Output/Results/sum_table.rds")
+# save the simulation results to Results folder
+write_csv(df_cv_MSE, file = "../Output/Results/simulation.csv")
+```
+
+The boxplot shows that random forest model with higher number of folds will have lower CV estimated MSE and more concentrated distribution. The tables shows that random forest model with more folds will have lower average CV estimates and lower standard deviation of the cv estimates. This might be the case because as the number of folds incease, we are using more data to test each fold, making our prediction more accurate.
